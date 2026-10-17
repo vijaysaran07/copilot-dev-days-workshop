@@ -1,9 +1,12 @@
 // UI code: connects the quiz logic (quiz.js) to the page (index.html).
 
 const QUESTION_TIME_LIMIT = 15;
+const BEST_SCORE_STORAGE_KEY = "dev-days-quiz-best-score";
 let state = createQuiz([]);
 let timeLeft = QUESTION_TIME_LIMIT;
 let timerInterval = null;
+let bestScore = null;
+let storageUnavailable = false;
 
 const startScreen = document.getElementById("start-screen");
 const quizScreen = document.getElementById("quiz-screen");
@@ -16,6 +19,54 @@ const feedbackText = document.getElementById("feedback");
 const nextButton = document.getElementById("next-btn");
 const scoreText = document.getElementById("score-text");
 const gradeText = document.getElementById("grade-text");
+const startBestScoreText = document.getElementById("start-best-score");
+const startBestScoreStatus = document.getElementById("start-best-score-status");
+const resultBestScoreText = document.getElementById("result-best-score");
+const newBestCelebration = document.getElementById("new-best-celebration");
+const resultBestScoreStatus = document.getElementById("result-best-score-status");
+
+function loadBestScore() {
+  try {
+    const savedScore = window.localStorage.getItem(BEST_SCORE_STORAGE_KEY);
+    const parsedScore = savedScore === null ? null : Number(savedScore);
+    bestScore =
+      Number.isInteger(parsedScore) && parsedScore >= 0 && parsedScore <= 100
+        ? parsedScore
+        : null;
+    storageUnavailable = false;
+  } catch {
+    bestScore = null;
+    storageUnavailable = true;
+  }
+}
+
+function saveBestScore(score) {
+  try {
+    window.localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(score));
+    bestScore = score;
+    storageUnavailable = false;
+    return true;
+  } catch {
+    storageUnavailable = true;
+    return false;
+  }
+}
+
+function formatBestScore() {
+  if (bestScore !== null) return `Best score: ${bestScore}%`;
+  return storageUnavailable ? "Best score: unavailable." : "Best score: No score yet.";
+}
+
+function formatStorageStatus() {
+  return storageUnavailable
+    ? "Best score storage is unavailable; your score may not persist after you leave this page."
+    : "";
+}
+
+function updateStartBestScore() {
+  startBestScoreText.textContent = formatBestScore();
+  startBestScoreStatus.textContent = formatStorageStatus();
+}
 
 function showScreen(screenToShow) {
   [startScreen, quizScreen, resultScreen].forEach((screen) => {
@@ -118,10 +169,24 @@ function nextQuestion() {
 function showResults() {
   const total = state.questions.length;
   const percentage = calculatePercentage(state.score, total);
+  const newBest = isNewBestScore(percentage, bestScore);
+
+  if (newBest && !saveBestScore(percentage)) {
+    bestScore = percentage;
+  }
+
   scoreText.textContent = `You scored ${state.score} out of ${total} (${percentage}%)`;
   gradeText.textContent = `Grade: ${getGrade(percentage)}`;
+  resultBestScoreText.textContent = formatBestScore();
+  newBestCelebration.textContent = newBest
+    ? `New personal best: ${percentage}%!`
+    : "";
+  resultBestScoreStatus.textContent = formatStorageStatus();
   showScreen(resultScreen);
 }
+
+loadBestScore();
+updateStartBestScore();
 
 document.getElementById("start-btn").addEventListener("click", startQuiz);
 document.getElementById("restart-btn").addEventListener("click", startQuiz);
