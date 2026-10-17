@@ -1,7 +1,8 @@
 // UI code: connects the quiz logic (quiz.js) to the page (index.html).
 
 const QUESTION_TIME_LIMIT = 15;
-const state = { questions: [], current: 0, score: 0, timeLeft: QUESTION_TIME_LIMIT };
+let state = createQuiz([]);
+let timeLeft = QUESTION_TIME_LIMIT;
 let timerInterval = null;
 
 const startScreen = document.getElementById("start-screen");
@@ -24,9 +25,7 @@ function showScreen(screenToShow) {
 
 function startQuiz() {
   stopTimer();
-  state.questions = shuffle(QUESTIONS);
-  state.current = 0;
-  state.score = 0;
+  state = createQuiz(shuffle(QUESTIONS));
   showScreen(quizScreen);
   renderQuestion();
 }
@@ -54,8 +53,8 @@ function renderQuestion() {
 }
 
 function updateTimer() {
-  timerText.textContent = formatTimeLeft(state.timeLeft);
-  timerText.classList.toggle("urgent", state.timeLeft <= 5);
+  timerText.textContent = formatTimeLeft(timeLeft);
+  timerText.classList.toggle("urgent", timeLeft <= 5);
 }
 
 function stopTimer() {
@@ -67,15 +66,15 @@ function stopTimer() {
 
 function startTimer() {
   stopTimer();
-  state.timeLeft = QUESTION_TIME_LIMIT;
+  timeLeft = QUESTION_TIME_LIMIT;
   updateTimer();
 
   const intervalId = setInterval(() => {
     if (timerInterval !== intervalId) return;
 
-    state.timeLeft--;
+    timeLeft--;
     updateTimer();
-    if (state.timeLeft === 0) {
+    if (timeLeft === 0) {
       const question = state.questions[state.current];
       const buttons = optionsList.querySelectorAll("button");
       selectAnswer(question.answer, buttons[question.answer], true);
@@ -89,12 +88,13 @@ function selectAnswer(selectedIndex, selectedButton, timedOut = false) {
   const question = state.questions[state.current];
   const buttons = optionsList.querySelectorAll("button");
   buttons.forEach((button) => (button.disabled = true));
+  const result = answerQuestion(state, timedOut ? null : selectedIndex);
+  state = result.state;
 
   if (timedOut) {
     buttons[question.answer].classList.add("correct");
     feedbackText.textContent = "Time's up!";
-  } else if (isCorrect(question, selectedIndex)) {
-    state.score++;
+  } else if (result.correct) {
     selectedButton.classList.add("correct");
     feedbackText.textContent = "Correct!";
   } else {
@@ -108,11 +108,10 @@ function selectAnswer(selectedIndex, selectedButton, timedOut = false) {
 }
 
 function nextQuestion() {
-  state.current++;
-  if (state.current < state.questions.length) {
-    renderQuestion();
-  } else {
+  if (isQuizFinished(state)) {
     showResults();
+  } else {
+    renderQuestion();
   }
 }
 

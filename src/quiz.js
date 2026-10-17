@@ -22,6 +22,53 @@ function isCorrect(question, selectedIndex) {
 }
 
 /**
+ * Creates a fresh quiz state without retaining the caller's questions array.
+ */
+function createQuiz(questions) {
+  if (!Array.isArray(questions)) {
+    throw new TypeError("questions must be an array");
+  }
+
+  return { questions: [...questions], current: 0, score: 0 };
+}
+
+/**
+ * Records an answer and advances to the next question without mutating state.
+ * Pass null when a question times out without an answer.
+ */
+function answerQuestion(state, selectedIndex) {
+  if (!state || !Array.isArray(state.questions)) {
+    throw new TypeError("state must be a quiz state");
+  }
+  if (state.current >= state.questions.length) {
+    throw new RangeError("there is no unanswered question");
+  }
+
+  const correct =
+    selectedIndex !== null &&
+    isCorrect(state.questions[state.current], selectedIndex);
+
+  return {
+    state: {
+      ...state,
+      current: state.current + 1,
+      score: state.score + (correct ? 1 : 0),
+    },
+    correct,
+  };
+}
+
+/**
+ * Returns true after every question has been answered or the quiz is empty.
+ */
+function isQuizFinished(state) {
+  if (!state || !Array.isArray(state.questions)) {
+    throw new TypeError("state must be a quiz state");
+  }
+  return state.current >= state.questions.length;
+}
+
+/**
  * Converts a score into a whole-number percentage (0-100).
  */
 function calculatePercentage(score, total) {
@@ -59,5 +106,15 @@ function formatTimeLeft(seconds) {
 
 // Lets Node.js tests load this file. Browsers ignore this block.
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { shuffle, isCorrect, calculatePercentage, getGrade, getFeedbackMessage, formatTimeLeft };
+  module.exports = {
+    shuffle,
+    isCorrect,
+    createQuiz,
+    answerQuestion,
+    isQuizFinished,
+    calculatePercentage,
+    getGrade,
+    getFeedbackMessage,
+    formatTimeLeft,
+  };
 }

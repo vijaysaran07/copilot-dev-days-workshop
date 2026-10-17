@@ -5,6 +5,9 @@ const assert = require("node:assert/strict");
 const {
   shuffle,
   isCorrect,
+  createQuiz,
+  answerQuestion,
+  isQuizFinished,
   calculatePercentage,
   getGrade,
   getFeedbackMessage,
@@ -17,6 +20,82 @@ test("isCorrect returns true for the right answer", () => {
 
 test("isCorrect returns false for a wrong answer", () => {
   assert.equal(isCorrect({ answer: 2 }, 0), false);
+});
+
+test("createQuiz initializes an independent state from questions", () => {
+  const questions = [{ question: "Q", options: ["A"], answer: 0 }];
+  const state = createQuiz(questions);
+
+  assert.deepEqual(state, { questions, current: 0, score: 0 });
+  assert.notEqual(state, questions);
+  assert.notEqual(state.questions, questions);
+});
+
+test("createQuiz initializes an empty quiz", () => {
+  assert.deepEqual(createQuiz([]), { questions: [], current: 0, score: 0 });
+});
+
+test("createQuiz rejects null questions", () => {
+  assert.throws(() => createQuiz(null), TypeError);
+});
+
+test("answerQuestion advances and scores a correct answer without mutation", () => {
+  const original = createQuiz([{ answer: 1 }]);
+  const result = answerQuestion(original, 1);
+
+  assert.equal(result.correct, true);
+  assert.deepEqual(result.state, {
+    questions: original.questions,
+    current: 1,
+    score: 1,
+  });
+  assert.deepEqual(original, {
+    questions: [{ answer: 1 }],
+    current: 0,
+    score: 0,
+  });
+});
+
+test("answerQuestion advances without scoring a wrong answer", () => {
+  const result = answerQuestion(createQuiz([{ answer: 1 }]), 0);
+
+  assert.equal(result.correct, false);
+  assert.equal(result.state.current, 1);
+  assert.equal(result.state.score, 0);
+});
+
+test("answerQuestion advances without scoring when no answer is selected", () => {
+  const result = answerQuestion(createQuiz([{ answer: 0 }]), null);
+
+  assert.equal(result.correct, false);
+  assert.equal(result.state.current, 1);
+  assert.equal(result.state.score, 0);
+});
+
+test("answerQuestion rejects null state", () => {
+  assert.throws(() => answerQuestion(null, 0), TypeError);
+});
+
+test("answerQuestion rejects a finished quiz", () => {
+  assert.throws(() => answerQuestion(createQuiz([]), 0), RangeError);
+});
+
+test("isQuizFinished returns true for an empty quiz", () => {
+  assert.equal(isQuizFinished(createQuiz([])), true);
+});
+
+test("isQuizFinished returns false before the last question is answered", () => {
+  assert.equal(isQuizFinished(createQuiz([{ answer: 0 }])), false);
+});
+
+test("isQuizFinished returns true after the last question is answered", () => {
+  const answered = answerQuestion(createQuiz([{ answer: 0 }]), 0).state;
+
+  assert.equal(isQuizFinished(answered), true);
+});
+
+test("isQuizFinished rejects null state", () => {
+  assert.throws(() => isQuizFinished(null), TypeError);
 });
 
 test("calculatePercentage rounds to a whole number", () => {
