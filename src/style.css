@@ -57,6 +57,19 @@ h2 {
   margin: 0;
 }
 
+.best-score {
+  font-weight: 600;
+}
+
+.storage-status {
+  color: var(--wrong);
+}
+
+.celebration {
+  color: var(--correct);
+  font-weight: 700;
+}
+
 .timer {
   margin: 0.25rem 0;
   color: var(--muted);
